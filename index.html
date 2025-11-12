@@ -1,200 +1,407 @@
-<!-- BEGIN: Subscription selector (paste into Replo Custom Code block) -->
-<style>
-  /* basic layout + Haura-like card styling */
-  .subs-wrap { max-width: 760px; margin: 12px auto; font-family: "Helvetica Neue", Arial, sans-serif; }
-  .subs-cards { display:flex; flex-direction:column; gap:14px; }
-  @media(min-width:900px){ .subs-cards { flex-direction: column; } }
-  .subs-card {
-    border: 2px solid #e8e1dd;
-    border-radius: 12px;
-    padding: 18px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    background: #fff;
-  }
-  .subs-card.popular { border-color: #ff7146; box-shadow: 0 6px 0 rgba(255,113,70,0.08); position:relative; }
-  .subs-card .left { display:flex; align-items:flex-start; gap:12px; }
-  .subs-radio { width:20px; height:20px; border-radius:50%; border:3px solid #f2f0ee; display:inline-block; margin-top:2px; }
-  .subs-card input[type="radio"] { display:none; }
-  .subs-card .title { font-weight:700; font-size:15px; color:#2e2a27; }
-  .subs-card .price { font-weight:800; font-size:18px; }
-  .subs-checks { margin-top:8px; font-size:13px; color:#666; }
-  .cta-row { margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  .btn-sub { background: linear-gradient(90deg,#ff7a49,#ff5a2b); color:#fff; border:none; padding:18px 26px; border-radius:8px; font-size:18px; cursor:pointer; flex:1 0 320px; }
-  .price-side { font-weight:800; color:#2f2f2f; font-size:18px; }
-  .badge-pop { position:absolute; right: -10px; top: 8px; background:#ff7a49; color:#fff; padding:8px 12px; border-radius:8px; font-weight:700; }
-  .small-muted { font-size:12px; color:#84807b; }
-</style>
-
-<div class="subs-wrap" id="haura-subs">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-    <div style="font-size:18px;font-weight:800">Choose subscription</div>
-    <div class="small-muted">Delivery offered for subscriptions</div>
-  </div>
-
-  <div class="subs-cards">
-    <!-- Subscribe & Save (popular) -->
-    <label class="subs-card popular" data-sp="SP_SUBSCRIBE" data-price="€49.00" data-raw-price="49.00">
-      <div class="left">
-        <div class="subs-radio" aria-hidden></div>
-        <div>
-          <div class="title">SUBSCRIBE AND SAVE</div>
-          <div class="subs-checks">
-            <div>Save 30€ every month</div>
-            <div>Benefit from it free delivery every month</div>
-            <div>Without commitment, cancel in one click</div>
-          </div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div class="price-side">€49.00</div>
-        <div class="small-muted">ONLY 1.63€/DAY</div>
-      </div>
-      <div class="badge-pop">POPULAR</div>
-      <input type="radio" name="haura_plan" value="SP_SUBSCRIBE" checked>
-    </label>
-
-    <!-- Discovery Test -->
-    <label class="subs-card" data-sp="SP_DISCOVERY" data-price="€59.00" data-raw-price="59.00">
-      <div class="left">
-        <div class="subs-radio" aria-hidden></div>
-        <div>
-          <div class="title">DISCOVERY TEST | 1 MONTH</div>
-          <div class="subs-checks">Try one month, no subscription binding</div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div class="price-side">€59.00</div>
-        <div class="small-muted">1.90€/DAY</div>
-      </div>
-      <input type="radio" name="haura_plan" value="SP_DISCOVERY">
-    </label>
-
-    <!-- New: 6-month plan -->
-    <label class="subs-card" data-sp="SP_6MONTH" data-price="€279.00" data-raw-price="279.00">
-      <div class="left">
-        <div class="subs-radio" aria-hidden></div>
-        <div>
-          <div class="title">SIX MONTHS | 6-MONTH PLAN</div>
-          <div class="subs-checks">
-            <div>Delivered every 6 months</div>
-            <div>Save vs one-off purchases</div>
-            <div>Cancel anytime before next billing</div>
-          </div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div class="price-side">€279.00</div>
-        <div class="small-muted">~1.53€/DAY</div>
-      </div>
-      <input type="radio" name="haura_plan" value="SP_6MONTH">
-    </label>
-  </div>
-
-  <div class="cta-row">
-    <button id="hauraAddBtn" class="btn-sub">SUBSCRIBE | €49.00</button>
-    <div style="min-width:120px;text-align:center;" id="hauraStatus" class="small-muted"></div>
-  </div>
-</div>
-
-<script>
-/*
-  Replace these placeholders:
-    - VARIANT_ID: the Shopify variant id (integer)
-    - SP_SUBSCRIBE / SP_DISCOVERY / SP_6MONTH: the selling_plan_id strings or numbers from Shopify/subscription app
-  Note: some subscription apps require their own widget or API. If add-to-cart fails, share which app you're using.
-*/
-const VARIANT_ID = 'REPLACE_VARIANT_ID'; // e.g. "38901234567890"
-const SELLING_PLAN_MAP = {
-  'SP_SUBSCRIBE': 'SP_SUBSCRIBE',    // replace with actual selling_plan_id for subscription monthly
-  'SP_DISCOVERY': 'SP_DISCOVERY',    // replace with actual selling_plan_id for discovery
-  'SP_6MONTH':   'SP_6MONTH'         // replace with actual selling_plan_id for 6-month plan
-};
-
-(function(){
-  const wrapper = document.getElementById('haura-subs');
-  const addBtn = document.getElementById('hauraAddBtn');
-  const status = document.getElementById('hauraStatus');
-
-  function updateUIFromSelection() {
-    const chosen = wrapper.querySelector('input[name="haura_plan"]:checked');
-    const label = chosen ? chosen.closest('.subs-card') : null;
-    if (!label) return;
-    // toggle visuals
-    wrapper.querySelectorAll('.subs-card').forEach(card=>{
-      card.style.borderColor = card===label ? '#ff7a49' : '#e8e1dd';
-      card.style.boxShadow = card===label ? '0 6px 0 rgba(255,113,70,0.06)' : 'none';
-    });
-    const price = label.getAttribute('data-price') || '';
-    addBtn.textContent = `SUBSCRIBE | ${price}`;
-  }
-
-  // initialize radio behavior
-  wrapper.querySelectorAll('.subs-card').forEach(card=>{
-    card.addEventListener('click', (e)=>{
-      // set radio inside
-      const input = card.querySelector('input[type="radio"]');
-      input.checked = true;
-      updateUIFromSelection();
-    });
-  });
-
-  // initial UI
-  updateUIFromSelection();
-
-  // Main add-to-cart action (Shopify AJAX)
-  addBtn.addEventListener('click', async function(){
-    status.textContent = 'Adding to cart...';
-    addBtn.disabled = true;
-
-    const chosen = wrapper.querySelector('input[name="haura_plan"]:checked');
-    const card = chosen.closest('.subs-card');
-    const spKey = chosen.value; // e.g. 'SP_6MONTH'
-    const sellingPlanId = SELLING_PLAN_MAP[spKey];
-
-    if(!VARIANT_ID || VARIANT_ID === 'REPLACE_VARIANT_ID' || !sellingPlanId || sellingPlanId.includes('SP_')) {
-      status.textContent = 'Please replace VARIANT_ID and selling plan IDs in the code snippet.';
-      addBtn.disabled = false;
-      return;
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2025 — Project Highlights Memo</title>
+  <style>
+    /* Reset */
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#00e676; --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+      --accent-2: #7cffcb;
+      --glass-border: rgba(255,255,255,0.06);
+      --maxw:1100px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg) 0%, #071224 60%);color:#e6eef7}
+    .wrap{max-width:var(--maxw);margin:36px auto;padding:28px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid var(--glass-border)}
 
-    const payload = {
-      items: [{
-        id: Number(VARIANT_ID),
-        quantity: 1,
-        selling_plan: sellingPlanId
-      }]
-    };
+    header{display:flex;gap:20px;align-items:center}
+    .brand{display:flex;flex-direction:column}
+    h1{margin:0;font-size:28px;letter-spacing:0.2px}
+    p.lead{margin:4px 0 0;color:var(--muted)}
 
-    try {
-      // Shopify Cart API - add multiple items route
-      const resp = await fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ id: Number(VARIANT_ID), quantity: 1, selling_plan: sellingPlanId })
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:20px;margin-top:22px}
+
+    /* Left column — main content */
+    .content{padding:8px}
+    .project{background:linear-gradient(180deg,var(--card), #09121a);border-radius:12px;padding:18px;margin-bottom:14px;border:1px solid var(--glass-border);position:relative;overflow:hidden}
+    .project::after{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;background:radial-gradient(circle at 30% 30%, rgba(0,230,118,0.06), transparent 40%), linear-gradient(140deg, rgba(124,255,188,0.04), transparent);transform:rotate(20deg);}
+    .p-head{display:flex;justify-content:space-between;align-items:center}
+    .p-title{font-weight:600;font-size:18px}
+    .p-sub{color:var(--muted);font-size:13px}
+    .badges{display:flex;gap:8px;margin-top:8px}
+    .badge{background:var(--glass);padding:6px 8px;border-radius:10px;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
+
+    .highlights{margin-top:12px}
+    .highlights ul{margin:0;padding-left:18px;color:#dbeaf2}
+    .tech{margin-top:10px;font-size:13px;color:var(--muted)}
+    .project:hover{transform:translateY(-6px);transition:transform .25s cubic-bezier(.2,.9,.3,1)}
+
+    /* Accent left column timeline */
+    .kpi{background:linear-gradient(90deg, rgba(0,0,0,0.2), transparent);padding:14px;border-radius:12px;border:1px solid var(--glass-border)}
+    .kpi h3{margin:0 0 8px 0}
+    .kpi-list{display:grid;gap:10px}
+    .kpi-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--glass-2);border-radius:8px}
+    .kpi-n{font-weight:700;font-size:18px;color:var(--accent)}
+    .kpi-l{font-size:13px;color:var(--muted)}
+
+    /* Right column */
+    aside{padding:8px}
+    .summary{background:linear-gradient(180deg,#08131b, #04101a);padding:16px;border-radius:12px;border:1px solid var(--glass-border)}
+    .summary h4{margin:0}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .tag{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px;color:var(--muted);font-size:13px}
+
+    /* Footer small */
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* Responsive */
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    /* Animations */
+    .fade-up{opacity:0;transform:translateY(10px);animation:fadeUp .6s cubic-bezier(.2,.9,.3,1) forwards}
+    .stagger-1{animation-delay:0.05s}
+    .stagger-2{animation-delay:0.12s}
+    .stagger-3{animation-delay:0.20s}
+    .stagger-4{animation-delay:0.30s}
+    @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+
+    /* neat ribbon */
+    .ribbon{position:absolute;right:18px;top:18px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#02261a;padding:6px 10px;border-radius:10px;font-weight:700;font-size:12px;box-shadow:0 6px 20px rgba(0,230,118,0.06)}
+
+    /* small code/cta */
+    .cta{display:inline-block;margin-top:10px;padding:8px 12px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--accent)}
+
+    /* subtle hover glow for badges */
+    .badge:hover{box-shadow:0 6px 20px rgba(0,0,0,0.3),0 0 20px rgba(0,230,118,0.04);} 
+
+    /* project header icons */
+    .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(180deg,var(--accent),var(--accent-2));display:inline-block;margin-right:8px;vertical-align:middle}
+
+    /* code block style for small notes */
+    .note{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,0.03);font-size:13px;color:var(--muted);margin-top:10px}
+
+  </style>
+</head>
+<body>
+  <div class="wrap fade-up">
+    <header>
+      <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#06111b,#09202a);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7v10a2 2 0 0 0 2 2h14" stroke="#00e676" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2" stroke="#7cffcb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="brand">
+        <h1>2025 — Project Highlights</h1>
+        <p class="lead">A curated memo showcasing the best developments — notifications, dashboards, integrations, AI wrappers and automation flows.</p>
+      </div>
+      <div style="flex:1"></div>
+      <div style="text-align:right">
+        <div style="font-size:13px;color:var(--muted)">Prepared by: <strong>Eko Dev Team</strong></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Year: 2025 • Format: HTML + CSS (single file)</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="content">
+
+        <!-- Notification Alert -->
+        <section class="project fade-up stagger-1">
+          <div class="ribbon">Top</div>
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Notification Alert</div>
+              <div class="p-sub">Custom function to push notifications into the organization's application.</div>
+            </div>
+            <div class="p-sub">Impact: Real-time awareness</div>
+          </div>
+
+          <div class="badges">
+            <div class="badge">Custom Function</div>
+            <div class="badge">Real-time</div>
+            <div class="badge">Zoho Desk</div>
+          </div>
+
+          <div class="highlights">
+            <ul>
+              <li>Built a custom function to forward notifications directly to the organization app.</li>
+              <li>Ensured ticket context and metadata accompany each notification for fast triage.</li>
+            </ul>
+          </div>
+          <div class="tech">Tech: Deluge, REST API, Webhooks</div>
+        </section>
+
+        <!-- Comment Alert -->
+        <section class="project fade-up stagger-2">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Comment Alert</div>
+              <div class="p-sub">Agent comments in Zoho Desk forwarded as actionable notifications to the org app.</div>
+            </div>
+            <div class="p-sub">Impact: Improved visibility</div>
+          </div>
+
+          <div class="badges">
+            <div class="badge">Agent activity</div>
+            <div class="badge">Context-rich</div>
+          </div>
+
+          <div class="highlights">
+            <ul>
+              <li>Captured comments published by agents and transmitted full ticket details to the app.</li>
+              <li>Reduced context switching for stakeholders by delivering ticket status and situational info instantly.</li>
+            </ul>
+          </div>
+          <div class="tech">Tech: Zoho Desk webhooks, API middleware</div>
+        </section>
+
+        <!-- Dispute Dashboard -->
+        <section class="project fade-up stagger-3">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Dispute Dashboard</div>
+              <div class="p-sub">Chargeback & fraud analysis fused with sales data; email alerts on threshold breaches.</div>
+            </div>
+            <div class="p-sub">Impact: Faster dispute handling</div>
+          </div>
+
+          <div class="badges">
+            <div class="badge">SQL-heavy</div>
+            <div class="badge">FTS Ratio</div>
+            <div class="badge">Email automation</div>
+          </div>
+
+          <div class="highlights">
+            <ul>
+              <li>Developed flows that join chargeback/fraud data with sales using complex SQL queries (multi-source).</li>
+              <li>Agents can view FTS ratios and auto-trigger emails to users when thresholds are breached.</li>
+            </ul>
+          </div>
+          <div class="tech">Tech: SQL, REST APIs, Zoho Creator</div>
+        </section>
+
+        <!-- Multiple Dashboards -->
+        <section class="project fade-up stagger-4">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Multiple Dashboard Creations</div>
+              <div class="p-sub">14+ dashboards designed with a fresh style to track agent metrics across departments.</div>
+            </div>
+            <div class="p-sub">Impact: Better data clarity</div>
+          </div>
+
+          <div class="badges">
+            <div class="badge">14+ Dashboards</div>
+            <div class="badge">Analytics</div>
+          </div>
+
+          <div class="highlights">
+            <ul>
+              <li>Created modern visualizations and UX patterns to make KPIs and metrics easier to consume.</li>
+              <li>Unified styles and filters for consistent cross-dashboard experience.</li>
+            </ul>
+          </div>
+          <div class="tech">Tech: Zoho Analytics, Custom SQL, Visualization design</div>
+        </section>
+
+        <!-- Integrations -->
+        <section class="project fade-up stagger-1">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Zoho ↔ Exotel Integration</div>
+              <div class="p-sub">Tracking inbound/outbound calls and enabling in-app calling.</div>
+            </div>
+            <div class="p-sub">Impact: Unified call tracking</div>
+          </div>
+
+          <div class="badges"><div class="badge">Telephony</div><div class="badge">CTI</div></div>
+          <div class="highlights"><ul><li>Integrated Exotel with Zoho apps to capture call metadata and allow click-to-call from the application.</li></ul></div>
+          <div class="tech">Tech: Exotel API, Zoho CRM/Desk</div>
+        </section>
+
+        <section class="project fade-up stagger-2">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Zoho ↔ Gupshup Integration</div>
+              <div class="p-sub">WhatsApp conversations & campaign integration for messaging flows.</div>
+            </div>
+            <div class="p-sub">Impact: Multi-channel messaging</div>
+          </div>
+
+          <div class="badges"><div class="badge">WhatsApp</div><div class="badge">Campaigns</div></div>
+          <div class="highlights"><ul><li>Connected Gupshup to route WhatsApp messages & campaigns into Zoho apps for tracking and automation.</li></ul></div>
+          <div class="tech">Tech: Gupshup APIs, Webhooks</div>
+        </section>
+
+        <!-- Eko RAG AI wrapper -->
+        <section class="project fade-up stagger-3">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Eko — RAG-based AI Wrapper</div>
+              <div class="p-sub">Cost-efficient AI assistant trained on Eko data; provides smart answers & insights.</div>
+            </div>
+            <div class="p-sub">Impact: Faster, context-aware responses</div>
+          </div>
+
+          <div class="badges"><div class="badge">RAG</div><div class="badge">OpenRouter</div></div>
+          <div class="highlights"><ul><li>Built an AI wrapper tuned to Eko-specific datasets to deliver SLM-style insights.</li><li>Configured API usage via OpenRouter to optimize for cost-efficiency.</li></ul></div>
+          <div class="tech">Tech: RAG, OpenRouter, Custom ML wrapper</div>
+        </section>
+
+        <!-- Admin & Network Subscriptions -->
+        <section class="project fade-up stagger-4">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Admin & Network Subscriptions</div>
+              <div class="p-sub">Full subscription flow using Zoho Billing integrated across Zoho apps and org APIs.</div>
+            </div>
+            <div class="p-sub">Impact: Accurate billing & reporting</div>
+          </div>
+
+          <div class="badges"><div class="badge">Zoho Billing</div><div class="badge">Subscriptions</div></div>
+          <div class="highlights"><ul><li>Designed subscription lifecycle flows and custom functions to sync subscription metadata across systems.</li></ul></div>
+          <div class="tech">Tech: Zoho Billing, APIs, Deluge</div>
+        </section>
+
+        <!-- M2M Growth Tracking -->
+        <section class="project fade-up stagger-1">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>M2M Growth Tracking</div>
+              <div class="p-sub">Unified dashboard pulling from 11 databases with a universal phone filter.</div>
+            </div>
+            <div class="p-sub">Impact: Complete user life journey view</div>
+          </div>
+
+          <div class="badges"><div class="badge">11 Data Sources</div><div class="badge">708 Queries</div></div>
+          <div class="highlights"><ul><li>Built the first dashboard that aggregates 11 databases and normalizes data with 708+ queries.</li><li>Tracks full user life journey, agent inputs, automation runs, and analytics sync in near real-time.</li></ul></div>
+          <div class="tech">Tech: ETL, SQL, Zoho Analytics</div>
+        </section>
+
+        <!-- Bilingual Email + Smart Content -->
+        <section class="project fade-up stagger-2">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Bilingual Email Alerts & Smart Content</div>
+              <div class="p-sub">Automated emails with dynamic content in English & Hindi.</div>
+            </div>
+            <div class="p-sub">Impact: Broader reach & personalization</div>
+          </div>
+
+          <div class="badges"><div class="badge">English / Hindi</div><div class="badge">Dynamic</div></div>
+          <div class="highlights"><ul><li>Automation generates context-aware emails on events and movements, supporting variables and bilingual content.</li></ul></div>
+          <div class="tech">Tech: Template engine, Localization, Zoho Campaigns</div>
+        </section>
+
+        <!-- Cashback Flow -->
+        <section class="project fade-up stagger-3">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Cashback Flow</div>
+              <div class="p-sub">Automated 10% instant cashback notification for first-time product/network usage.</div>
+            </div>
+            <div class="p-sub">Impact: Improved activation & engagement</div>
+          </div>
+
+          <div class="badges"><div class="badge">Analytics</div><div class="badge">Real-time sync</div></div>
+          <div class="highlights"><ul><li>Triggered notifications & analytics tracking using DB queries and org APIs to credit cashback and notify users instantly.</li></ul></div>
+          <div class="tech">Tech: SQL, APIs, Analytics</div>
+        </section>
+
+        <!-- Comparison Flow -->
+        <section class="project fade-up stagger-4">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Comparison Flow</div>
+              <div class="p-sub">Daily/Weekly/Monthly comparative notifications to motivate users.</div>
+            </div>
+            <div class="p-sub">Impact: Engagement through gamified insights</div>
+          </div>
+
+          <div class="badges"><div class="badge">Daily / Weekly / Monthly</div></div>
+          <div class="highlights"><ul><li>Built a comparative reporting flow (no Zoho terminal code) and tracked results into Zoho Analytics.</li></ul></div>
+          <div class="tech">Tech: Scheduled jobs, Analytics</div>
+        </section>
+
+        <!-- Drag & Drop Website Builder -->
+        <section class="project fade-up stagger-1">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Drag & Drop Website Builder</div>
+              <div class="p-sub">Low-code external product for building workflows & pages — reduces server load and enables eko assistance.</div>
+            </div>
+            <div class="p-sub">Impact: Self-serve & scalable</div>
+          </div>
+
+          <div class="badges"><div class="badge">No/Low-code</div><div class="badge">Product</div></div>
+          <div class="highlights"><ul><li>Developed a standalone drag & drop builder to help users construct workflows/pages with minimal server overhead.</li></ul></div>
+          <div class="tech">Tech: Frontend drag-drop engine, Backend APIs</div>
+        </section>
+
+        <!-- Additional developments compact -->
+        <section class="project fade-up stagger-2">
+          <div class="p-head">
+            <div>
+              <div class="p-title"><span class="dot"></span>Additional Developments</div>
+              <div class="p-sub">A quick summary of recurring developer wins and integrations.</div>
+            </div>
+            <div class="p-sub">Impact: Operational efficiency</div>
+          </div>
+
+          <div class="highlights">
+            <ul>
+              <li>27+ custom functions/workflows in CRM; merged multiple Desk workflows using Deluge to reduce active workflows and data load.</li>
+              <li>Smart workflows in Zoho Campaigns & Eko bot SalesIQ; integrations with Chetto, Multicom, Govt. GST norms, PayU.</li>
+              <li>9–10 smart flows in n8n to optimize server loads; 4+ Zoho Creator functions for dispute handling — automatic deductions reduced manual effort by ~80%.</li>
+              <li>And a lot more incremental improvements across the stack.</li>
+            </ul>
+          </div>
+          <div class="note">Note: This memo highlights product-level outcomes (reduced load, improved visibility, automation) rather than implementation minutiae. Use project sections as shareable slides or as appendix content for technical handoffs.</div>
+        </section>
+
+      </div>
+
+      <aside>
+        <div class="summary fade-up stagger-3">
+          <h4>Quick KPIs</h4>
+          <div class="kpi-list" style="margin-top:10px">
+            <div class="kpi-item"><div class="kpi-l">Dashboards built</div><div class="kpi-n">14+</div></div>
+            <div class="kpi-item"><div class="kpi-l">Custom functions</div><div class="kpi-n">27+</div></div>
+            <div class="kpi-item"><div class="kpi-l">Databases connected</div><div class="kpi-n">11</div></div>
+            <div class="kpi-item"><div class="kpi-l">SQL queries written</div><div class="kpi-n">708+</div></div>
+          </div>
+
+          <div style="margin-top:14px">
+            <a class="cta" href="#details">Download / Export</a>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="summary fade-up stagger-4">
+          <h4>Tech Tags</h4>
+          <div class="tags" style="margin-top:10px">
+            <div class="tag">Zoho Desk</div><div class="tag">Zoho CRM</div><div class="tag">Zoho Analytics</div>
+            <div class="tag">Deluge</div><div class="tag">SQL</div><div class="tag">OpenRouter</div>
+            <div class="tag">Exotel</div><div class="tag">Gupshup</div><div class="tag">n8n</div>
+          </div>
+
+          <div style="margin-top:12px" class="note">Want this exported as a PDF or slide deck? Reply with your preferred format and I’ll generate it.</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>Built with ♥ — Eko Development Team • Share or print this memo for stakeholders</footer>
+  </div>
+
+  <script>
+    // simple reveal on load for stagger effect
+    document.addEventListener('DOMContentLoaded',function(){
+      document.querySelectorAll('.fade-up').forEach(function(el,i){
+        el.style.animationDelay = (i*80) + 'ms';
       });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        console.error('Add to cart failed', resp.status, text);
-        status.textContent = 'Failed to add to cart. Check console for details.';
-        addBtn.disabled = false;
-        return;
-      }
-
-      // Optionally open cart or redirect to checkout
-      status.textContent = 'Added to cart — opening cart...';
-      // open cart drawer or redirect to /cart
-      setTimeout(()=> { window.location.href = '/cart'; }, 600);
-
-    } catch (err) {
-      console.error(err);
-      status.textContent = 'Error adding to cart.';
-      addBtn.disabled = false;
-    }
-  });
-})();
-</script>
-<!-- END: Subscription selector -->
+    });
+  </script>
+</body>
+</html>
