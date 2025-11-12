@@ -1,0 +1,200 @@
+<!-- BEGIN: Subscription selector (paste into Replo Custom Code block) -->
+<style>
+  /* basic layout + Haura-like card styling */
+  .subs-wrap { max-width: 760px; margin: 12px auto; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .subs-cards { display:flex; flex-direction:column; gap:14px; }
+  @media(min-width:900px){ .subs-cards { flex-direction: column; } }
+  .subs-card {
+    border: 2px solid #e8e1dd;
+    border-radius: 12px;
+    padding: 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    background: #fff;
+  }
+  .subs-card.popular { border-color: #ff7146; box-shadow: 0 6px 0 rgba(255,113,70,0.08); position:relative; }
+  .subs-card .left { display:flex; align-items:flex-start; gap:12px; }
+  .subs-radio { width:20px; height:20px; border-radius:50%; border:3px solid #f2f0ee; display:inline-block; margin-top:2px; }
+  .subs-card input[type="radio"] { display:none; }
+  .subs-card .title { font-weight:700; font-size:15px; color:#2e2a27; }
+  .subs-card .price { font-weight:800; font-size:18px; }
+  .subs-checks { margin-top:8px; font-size:13px; color:#666; }
+  .cta-row { margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .btn-sub { background: linear-gradient(90deg,#ff7a49,#ff5a2b); color:#fff; border:none; padding:18px 26px; border-radius:8px; font-size:18px; cursor:pointer; flex:1 0 320px; }
+  .price-side { font-weight:800; color:#2f2f2f; font-size:18px; }
+  .badge-pop { position:absolute; right: -10px; top: 8px; background:#ff7a49; color:#fff; padding:8px 12px; border-radius:8px; font-weight:700; }
+  .small-muted { font-size:12px; color:#84807b; }
+</style>
+
+<div class="subs-wrap" id="haura-subs">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="font-size:18px;font-weight:800">Choose subscription</div>
+    <div class="small-muted">Delivery offered for subscriptions</div>
+  </div>
+
+  <div class="subs-cards">
+    <!-- Subscribe & Save (popular) -->
+    <label class="subs-card popular" data-sp="SP_SUBSCRIBE" data-price="€49.00" data-raw-price="49.00">
+      <div class="left">
+        <div class="subs-radio" aria-hidden></div>
+        <div>
+          <div class="title">SUBSCRIBE AND SAVE</div>
+          <div class="subs-checks">
+            <div>Save 30€ every month</div>
+            <div>Benefit from it free delivery every month</div>
+            <div>Without commitment, cancel in one click</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="price-side">€49.00</div>
+        <div class="small-muted">ONLY 1.63€/DAY</div>
+      </div>
+      <div class="badge-pop">POPULAR</div>
+      <input type="radio" name="haura_plan" value="SP_SUBSCRIBE" checked>
+    </label>
+
+    <!-- Discovery Test -->
+    <label class="subs-card" data-sp="SP_DISCOVERY" data-price="€59.00" data-raw-price="59.00">
+      <div class="left">
+        <div class="subs-radio" aria-hidden></div>
+        <div>
+          <div class="title">DISCOVERY TEST | 1 MONTH</div>
+          <div class="subs-checks">Try one month, no subscription binding</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="price-side">€59.00</div>
+        <div class="small-muted">1.90€/DAY</div>
+      </div>
+      <input type="radio" name="haura_plan" value="SP_DISCOVERY">
+    </label>
+
+    <!-- New: 6-month plan -->
+    <label class="subs-card" data-sp="SP_6MONTH" data-price="€279.00" data-raw-price="279.00">
+      <div class="left">
+        <div class="subs-radio" aria-hidden></div>
+        <div>
+          <div class="title">SIX MONTHS | 6-MONTH PLAN</div>
+          <div class="subs-checks">
+            <div>Delivered every 6 months</div>
+            <div>Save vs one-off purchases</div>
+            <div>Cancel anytime before next billing</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="price-side">€279.00</div>
+        <div class="small-muted">~1.53€/DAY</div>
+      </div>
+      <input type="radio" name="haura_plan" value="SP_6MONTH">
+    </label>
+  </div>
+
+  <div class="cta-row">
+    <button id="hauraAddBtn" class="btn-sub">SUBSCRIBE | €49.00</button>
+    <div style="min-width:120px;text-align:center;" id="hauraStatus" class="small-muted"></div>
+  </div>
+</div>
+
+<script>
+/*
+  Replace these placeholders:
+    - VARIANT_ID: the Shopify variant id (integer)
+    - SP_SUBSCRIBE / SP_DISCOVERY / SP_6MONTH: the selling_plan_id strings or numbers from Shopify/subscription app
+  Note: some subscription apps require their own widget or API. If add-to-cart fails, share which app you're using.
+*/
+const VARIANT_ID = 'REPLACE_VARIANT_ID'; // e.g. "38901234567890"
+const SELLING_PLAN_MAP = {
+  'SP_SUBSCRIBE': 'SP_SUBSCRIBE',    // replace with actual selling_plan_id for subscription monthly
+  'SP_DISCOVERY': 'SP_DISCOVERY',    // replace with actual selling_plan_id for discovery
+  'SP_6MONTH':   'SP_6MONTH'         // replace with actual selling_plan_id for 6-month plan
+};
+
+(function(){
+  const wrapper = document.getElementById('haura-subs');
+  const addBtn = document.getElementById('hauraAddBtn');
+  const status = document.getElementById('hauraStatus');
+
+  function updateUIFromSelection() {
+    const chosen = wrapper.querySelector('input[name="haura_plan"]:checked');
+    const label = chosen ? chosen.closest('.subs-card') : null;
+    if (!label) return;
+    // toggle visuals
+    wrapper.querySelectorAll('.subs-card').forEach(card=>{
+      card.style.borderColor = card===label ? '#ff7a49' : '#e8e1dd';
+      card.style.boxShadow = card===label ? '0 6px 0 rgba(255,113,70,0.06)' : 'none';
+    });
+    const price = label.getAttribute('data-price') || '';
+    addBtn.textContent = `SUBSCRIBE | ${price}`;
+  }
+
+  // initialize radio behavior
+  wrapper.querySelectorAll('.subs-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      // set radio inside
+      const input = card.querySelector('input[type="radio"]');
+      input.checked = true;
+      updateUIFromSelection();
+    });
+  });
+
+  // initial UI
+  updateUIFromSelection();
+
+  // Main add-to-cart action (Shopify AJAX)
+  addBtn.addEventListener('click', async function(){
+    status.textContent = 'Adding to cart...';
+    addBtn.disabled = true;
+
+    const chosen = wrapper.querySelector('input[name="haura_plan"]:checked');
+    const card = chosen.closest('.subs-card');
+    const spKey = chosen.value; // e.g. 'SP_6MONTH'
+    const sellingPlanId = SELLING_PLAN_MAP[spKey];
+
+    if(!VARIANT_ID || VARIANT_ID === 'REPLACE_VARIANT_ID' || !sellingPlanId || sellingPlanId.includes('SP_')) {
+      status.textContent = 'Please replace VARIANT_ID and selling plan IDs in the code snippet.';
+      addBtn.disabled = false;
+      return;
+    }
+
+    const payload = {
+      items: [{
+        id: Number(VARIANT_ID),
+        quantity: 1,
+        selling_plan: sellingPlanId
+      }]
+    };
+
+    try {
+      // Shopify Cart API - add multiple items route
+      const resp = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ id: Number(VARIANT_ID), quantity: 1, selling_plan: sellingPlanId })
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error('Add to cart failed', resp.status, text);
+        status.textContent = 'Failed to add to cart. Check console for details.';
+        addBtn.disabled = false;
+        return;
+      }
+
+      // Optionally open cart or redirect to checkout
+      status.textContent = 'Added to cart — opening cart...';
+      // open cart drawer or redirect to /cart
+      setTimeout(()=> { window.location.href = '/cart'; }, 600);
+
+    } catch (err) {
+      console.error(err);
+      status.textContent = 'Error adding to cart.';
+      addBtn.disabled = false;
+    }
+  });
+})();
+</script>
+<!-- END: Subscription selector -->
